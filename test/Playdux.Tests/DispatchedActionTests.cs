@@ -1,7 +1,8 @@
 #nullable enable
 using System;
 using System.Diagnostics;
-using NUnit.Framework;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Playdux.src.Store;
 
 namespace Playdux.test
@@ -10,22 +11,22 @@ namespace Playdux.test
     {
         private class TestAction : IAction { }
 
-        [Test]
+        [Fact]
         public void HasCorrectDispatchedTime()
         {
             var now = DateTime.Now;
             var da = new DispatchedAction(new TestAction());
 
-            Assert.That(da.DispatchTime, Is.EqualTo(now).Within(TimeSpan.FromMilliseconds(10)), "DispatchedAction DispatchTime is incorrect.");
+            da.DispatchTime.Should().BeCloseTo(now, 10.Milliseconds());
         }
 
-        [Test]
+        [Fact]
         public void HasCorrectStackFrame()
         {
             var da = new DispatchedAction(new TestAction());
-            var thisMethodInfo = new StackTrace().GetFrame(0).GetMethod();
+            var thisMethodInfo = new StackTrace().GetFrame(0)!.GetMethod();
 
-            Assert.AreEqual(thisMethodInfo, da.DispatchStackTrace.GetFrame(0).GetMethod(), "DispatchedAction stack track is incorrect.");
+            da.DispatchStackTrace.GetFrame(0)!.GetMethod().Should().Be(thisMethodInfo);
         }
     }
 }

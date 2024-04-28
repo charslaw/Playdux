@@ -2,50 +2,44 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using FluentAssertions;
 using Playdux.src.Store;
-using UnityEngine.TestTools;
 
 namespace Playdux.test
 {
     public class SideEffectorTests
     {
-        private Store<SimpleTestState>? simpleStore;
-
-        [TearDown]
-        public void Teardown() { simpleStore?.Dispose(); }
-
-        [Test]
+        [Fact]
         public void IdentitySideEffectorHasNoEffect()
         {
             SimpleTestState init = new(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
             simpleStore.RegisterSideEffector(new TestSideEffectors.DoesNothingSideEffector<SimpleTestState>());
 
             SimpleTestState newState = new(10);
             simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
 
-            Assert.AreEqual(newState with { }, simpleStore.State, "State was not modified by InitializeAction");
+            simpleStore.State.Should().BeEquivalentTo(newState);
         }
 
-        [Test]
+        [Fact]
         public void PreventativeSideEffectorPreventsStateChange()
         {
             SimpleTestState init = new(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
             simpleStore.RegisterSideEffector(new TestSideEffectors.PreventsAllActionsSideEffector<SimpleTestState>());
 
             SimpleTestState newState = new(10);
             simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
 
-            Assert.AreEqual(init with { }, simpleStore.State, "State was modified by InitializeAction");
+            simpleStore.State.Should().BeEquivalentTo(init);
         }
 
-        [Test]
+        [Fact]
         public void PostSideEffectorGetsUpdatedStateFromAction()
         {
             SimpleTestState init = new(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             int? actualValue = null;
             simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(post: (_, store) => { actualValue = store.State.N; }));
@@ -53,14 +47,14 @@ namespace Playdux.test
             SimpleTestState newState = new(10);
             simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
 
-            Assert.AreEqual(10, actualValue, "Side effector did not get new state created from dispatched action");
+            actualValue.Should().Be(10);
         }
 
-        [Test]
+        [Fact]
         public void PreSideEffectorCanProduceSideEffects()
         {
             SimpleTestState init = new(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var executeCount = 0;
             simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) =>
@@ -72,14 +66,14 @@ namespace Playdux.test
             SimpleTestState newState = new(10);
             simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
 
-            Assert.AreEqual(1, executeCount, "Pre side effect did not trigger");
+            executeCount.Should().Be(1);
         }
 
-        [Test]
+        [Fact]
         public void PostSideEffectorCanProduceSideEffects()
         {
             SimpleTestState init = new(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var executeCount = 0;
             simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(post: (_, _) => executeCount++));
@@ -87,14 +81,14 @@ namespace Playdux.test
             SimpleTestState newState = new(10);
             simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
 
-            Assert.AreEqual(1, executeCount, "Post side effect did not trigger");
+            executeCount.Should().Be(1);
         }
 
-        [Test]
+        [Fact]
         public void PreSideEffectorCanInterceptAndInjectSeparateAction()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.AcceptAddSimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.AcceptAddSimpleTestStateReducer);
 
             simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (dispatchedAction, dispatcher) =>
                 {
@@ -111,15 +105,14 @@ namespace Playdux.test
 
             simpleStore.Dispatch(new SimpleStateAddAction(5));
 
-            Assert.AreNotEqual(5, simpleStore.State.N, "Effect of SimpleStateAddAction was applied when it shouldn't have been");
-            Assert.AreEqual(6, simpleStore.State.N, "Effect of BetterSimpleStateAddAction was not applied");
+            simpleStore.State.N.Should().Be(6);
         }
 
-        [Test]
+        [Fact]
         public void PreSideEffectorInjectedActionWaitsForInitialActionCompletion()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var firstRun = true;
             simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, store) =>
@@ -144,14 +137,14 @@ namespace Playdux.test
 
             simpleStore.Dispatch(new SimpleStateAddAction(13));
 
-            CollectionAssert.AreEqual(new[] { 13, 7 }, order, $"Actions were not received in correct order: [ {string.Join(",", order)} ]");
+            order.Should().BeEquivalentTo([13, 7]);
         }
 
-        [Test]
+        [Fact]
         public void UnregisteredSideEffectorDoesNotGetCalled()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var executeCount = 0;
             var sideEffectorId = simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
@@ -165,14 +158,14 @@ namespace Playdux.test
 
             simpleStore.Dispatch(new EmptyAction());
 
-            Assert.AreEqual(0, executeCount, "Unregistered side effector was called");
+            executeCount.Should().Be(0);
         }
 
-        [Test]
+        [Fact]
         public void PreSideEffectorCantCancelOtherPreSideEffectors()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var secondCalled = false;
 
@@ -187,14 +180,14 @@ namespace Playdux.test
 
             simpleStore.Dispatch(new EmptyAction());
 
-            Assert.IsTrue(secondCalled, "The second side effector was prevented from being called");
+            secondCalled.Should().BeTrue();
         }
 
-        [Test]
+        [Fact]
         public void SideEffectorsWithSamePriorityActivatedInOrderOfAddition()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var order = new List<int>();
 
@@ -224,14 +217,14 @@ namespace Playdux.test
 
             simpleStore.Dispatch(new EmptyAction());
 
-            CollectionAssert.AreEqual(Enumerable.Range(0, 3), order, $"Side effectors were not called in order of registration: [ {string.Join(",", order)} ]");
+            order.Should().BeEquivalentTo([0, 1, 2]);
         }
 
-        [Test]
+        [Fact]
         public void SideEffectorsOccurInPriorityOrder()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var order = new List<int>();
 
@@ -253,14 +246,14 @@ namespace Playdux.test
 
             simpleStore.Dispatch(new EmptyAction());
 
-            CollectionAssert.AreEqual(Enumerable.Range(0, 2), order, $"Side effectors were not called in priority order: [ {string.Join(",", order)} ]");
+            order.Should().BeEquivalentTo([0, 1]);
         }
 
-        [Test]
+        [Fact]
         public void SideEffectorInsertOrderIsCorrect()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var order = new List<int>();
 
@@ -298,14 +291,14 @@ namespace Playdux.test
 
             simpleStore.Dispatch(new EmptyAction());
 
-            CollectionAssert.AreEqual(Enumerable.Range(0, 4), order, $"Side effectors were not inserted in the correct order: [ {string.Join(",", order)} ]");
+            order.Should().BeEquivalentTo([0, 1, 2, 3]);
         }
 
-        [Test]
+        [Fact]
         public void UnregisteringSideEffectorRemovesCorrectSideEffector()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             var firstCalled = false;
             simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) => {
@@ -322,42 +315,37 @@ namespace Playdux.test
             simpleStore.UnregisterSideEffector(secondID);
             
             simpleStore.Dispatch(new EmptyAction());
-            
-            Assert.AreEqual(false, secondCalled, "Second side effector was called despite being unregistered!");
-            Assert.AreEqual(true, firstCalled, "First was not called despite remaining registered");
+
+            (firstCalled, secondCalled).Should().Be((true, false));
         }
 
-        [Test]
+        [Fact]
         public void SideEffectorThrowingDoesNotPreventExecutionOfOtherSideEffectors()
         {
-            // Tell unity to ignore the Debug.LogError and Debug.LogException that will happen when a side effector throws an error
-            LogAssert.ignoreFailingMessages = true;
-
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
             
             simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) => throw new Exception()));
             
             var secondCalled = false;
-            var secondID = simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) => {
+            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) => {
                 secondCalled = true;
                 return true;
             }));
             
-            simpleStore.UnregisterSideEffector(secondID);
-            
             simpleStore.Dispatch(new EmptyAction());
-            
-            Assert.AreEqual(false, secondCalled, "Second side effector was not called after the first threw an exception.");
+
+            secondCalled.Should().BeTrue();
         }
 
-        [Test]
+        [Fact]
         public void UnregisteringNonexistantSideEffectorThrows()
         {
             var init = new SimpleTestState(0);
-            simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
-            Assert.Throws<ArgumentException>(() => simpleStore.UnregisterSideEffector(Guid.NewGuid()));
+            simpleStore.Invoking(store => store.UnregisterSideEffector(Guid.NewGuid()))
+                .Should().Throw<ArgumentException>();
         }
     }
 }
