@@ -1,4 +1,8 @@
+# IDE Stuff
 .idea
+*.DotSettings.user
 .vs
+
+# Build Stuff
 bin/
 obj/
