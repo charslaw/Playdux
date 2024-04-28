@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6AC1AFE6-CE7E-4072-8280-9607C47969A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playdux", "src\Playdux\Playdux.csproj", "{7CB54057-D169-4DD9-93CD-C53D265A122A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{77A18678-E242-4746-AE70-14A3598FFCDC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playdux.Tests", "test\Playdux.Tests\Playdux.Tests.csproj", "{0E30F8EE-08D9-4F32-89AF-85D7F74E7E44}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7CB54057-D169-4DD9-93CD-C53D265A122A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CB54057-D169-4DD9-93CD-C53D265A122A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CB54057-D169-4DD9-93CD-C53D265A122A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CB54057-D169-4DD9-93CD-C53D265A122A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E30F8EE-08D9-4F32-89AF-85D7F74E7E44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E30F8EE-08D9-4F32-89AF-85D7F74E7E44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E30F8EE-08D9-4F32-89AF-85D7F74E7E44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E30F8EE-08D9-4F32-89AF-85D7F74E7E44}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7CB54057-D169-4DD9-93CD-C53D265A122A} = {6AC1AFE6-CE7E-4072-8280-9607C47969A1}
+		{0E30F8EE-08D9-4F32-89AF-85D7F74E7E44} = {77A18678-E242-4746-AE70-14A3598FFCDC}
+	EndGlobalSection
+EndGlobal
