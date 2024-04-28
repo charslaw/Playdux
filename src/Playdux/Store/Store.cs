@@ -1,8 +1,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using UniRx;
-using UnityEngine;
 
 namespace Playdux.src.Store
 {
@@ -11,10 +9,10 @@ namespace Playdux.src.Store
     /// Includes capability to dispatch actions to the store, get the current state, get the current state narrowed by
     /// a selector, and get an IObservable to the "selected" state.
     /// </summary>
-    public sealed class Store<TRootState> : IDisposable, IStore<TRootState> where TRootState : class
+    public sealed class Store<TRootState> : IStore<TRootState> where TRootState : class
     {
         /// The current state within the store.
-        public TRootState State => stateStream.Value;
+        public TRootState State { get; private set; }
 
         /// Reduces state according to actions dispatched to the store.
         private readonly Func<TRootState, IAction, TRootState> rootReducer;
@@ -22,18 +20,14 @@ namespace Playdux.src.Store
         /// Holds actions in a defined FIFO order to ensure actions are processed in the order that they are received.
         private readonly ActionQueue actionQueue;
 
-        /// A stream of the current state within the store.
-        /// This stream is safely shared to consumers (via ObservableFor) in such a way that consumer cancellation and errors are isolated from the main stream.
-        private readonly BehaviorSubject<TRootState> stateStream;
-
         /// Holds side effectors in a collection that preserves priority while also providing fast addition and removal.
         private readonly SideEffectorCollection<TRootState> sideEffectors = new();
 
         /// Create a new store with a given initial state and reducer
         public Store(TRootState initialState, Func<TRootState, IAction, TRootState> rootReducer, IEnumerable<ISideEffector<TRootState>>? initialSideEffectors = null)
         {
+            State = initialState;
             this.rootReducer = rootReducer;
-            stateStream = new BehaviorSubject<TRootState>(initialState);
             actionQueue = new ActionQueue(DispatchInternal);
 
             if (initialSideEffectors is null) return;
@@ -61,7 +55,7 @@ namespace Playdux.src.Store
                     var shouldAllow = sideEffector.PreEffect(dispatchedAction, this);
                     if (!shouldAllow) dispatchedAction = dispatchedAction with { IsCanceled = true };
                 }
-                catch (Exception e) { Debug.LogException(new SideEffectorExecutionException(SideEffectorType.Pre, e)); }
+                catch (Exception e) { throw new SideEffectorExecutionException(SideEffectorType.Pre, e); }
             }
 
             if (dispatchedAction.IsCanceled) return;
@@ -70,16 +64,13 @@ namespace Playdux.src.Store
             var action = dispatchedAction.Action;
             var state = State;
             if (action is InitializeAction<TRootState> castAction) state = castAction.InitialState;
-            state = rootReducer(state, action);
-
-            // Update State
-            stateStream.OnNext(state);
+            State = rootReducer(state, action);
 
             // Post Effects
             foreach (var sideEffector in sideEffectors.ByPriority)
             {
                 try { sideEffector.PostEffect(dispatchedAction, this); }
-                catch (Exception e) { Debug.LogException(new SideEffectorExecutionException(SideEffectorType.Post, e)); }
+                catch (Exception e) { throw new SideEffectorExecutionException(SideEffectorType.Post, e); }
             }
         }
 
@@ -92,21 +83,10 @@ namespace Playdux.src.Store
         /// <inheritdoc cref="IStateContainer{TRootState}.Select{TSelectedState}"/>
         public TSelectedState Select<TSelectedState>(Func<TRootState, TSelectedState> selector) => selector(State);
 
-        /// <inheritdoc cref="IStateContainer{TRootState}.ObservableFor{TSelectedState}"/>
-        public IObservable<TSelectedState> ObservableFor<TSelectedState>(Func<TRootState, TSelectedState> selector, bool notifyImmediately = false) =>
-            Observable.Create<TRootState>(observer => stateStream.Subscribe(
-                    onNext: next =>
-                    {
-                        try { observer.OnNext(next); }
-                        catch (Exception e) { observer.OnError(e); }
-                    },
-                    observer.OnError,
-                    observer.OnCompleted
-                ))
-                .StartWith(State)
-                .Select(selector)
-                .DistinctUntilChanged()
-                .Skip(notifyImmediately ? 0 : 1);
+        public IObservable<TSelectedState> ObservableFor<TSelectedState>(Func<TRootState, TSelectedState> selector, bool notifyImmediately = false)
+        {
+            throw new NotImplementedException();
+        }
 
         /// Throws an error if an incorrectly typed InitializeAction is dispatched to this store.
         private static void ValidateInitializeAction(IAction action)
@@ -117,8 +97,5 @@ namespace Playdux.src.Store
 
             if (isInitializeAction && !isInitializeActionCorrectType) throw new InitializeTypeMismatchException(actionType.GetGenericArguments()[0], typeof(TRootState));
         }
-
-        /// <inheritdoc cref="IDisposable.Dispose"/>
-        public void Dispose() => stateStream.Dispose();
     }
 }
