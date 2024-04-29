@@ -1,8 +1,9 @@
+using System;
 using Playdux.Store;
 
-namespace Playdux.Tests;
+namespace Shared;
 
-internal static class TestReducers
+public static class TestReducers
 {
     public static Func<SimpleTestState, IAction, SimpleTestState> GenerateSetNSimpleTestStateReducer(int value) => (state, _) => state with { N = value };
 

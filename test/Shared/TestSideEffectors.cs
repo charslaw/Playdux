@@ -1,10 +1,12 @@
+using System;
 using Playdux.Store;
 
-namespace Playdux.Tests;
+namespace Shared;
 
 public static class TestSideEffectors
 {
     public class FakeSideEffector<T> : ISideEffector<T>
+        where T : class, IEquatable<T>
     {
         public int Priority { get; }
 
@@ -23,11 +25,13 @@ public static class TestSideEffectors
     }
 
     public class DoesNothingSideEffector<T> : FakeSideEffector<T>
+        where T : class, IEquatable<T>
     {
         public DoesNothingSideEffector() : base((_, _) => true) { }
     }
 
     public class PreventsAllActionsSideEffector<T> : FakeSideEffector<T>
+        where T : class, IEquatable<T>
     {
         public PreventsAllActionsSideEffector() : base((_, _) => false) { }
     }

@@ -1,6 +1,8 @@
-namespace Playdux.Tests;
+using System;
 
-internal class BaseObserver<T>(
+namespace Shared;
+
+public class BaseObserver<T>(
     Action<T>? onNext = null,
     Action<Exception>? onError = null,
     Action? onCompleted = null
@@ -13,7 +15,7 @@ internal class BaseObserver<T>(
     public void OnNext(T value) => onNext?.Invoke(value);
 }
 
-internal static class IObservableExtensions
+public static class IObservableExtensions
 {
     public static IDisposable Subscribe<T>(
         this IObservable<T> observable,
