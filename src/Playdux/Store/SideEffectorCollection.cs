@@ -4,6 +4,7 @@ using System.Collections.Generic;
 namespace Playdux.Store;
 
 public class SideEffectorCollection<TRootState>
+    where TRootState : class, IEquatable<TRootState>
 {
     private readonly Dictionary<Guid, ISideEffector<TRootState>> table = new();
     private readonly List<ISideEffector<TRootState>> priority = new();

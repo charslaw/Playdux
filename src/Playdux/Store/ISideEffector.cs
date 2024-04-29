@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 
 namespace Playdux.Store;
 
 public interface ISideEffector<in TRootState>
+    where TRootState : class, IEquatable<TRootState>
 {
     /// Determines the order in which SideEffectors will be executed.
     /// Higher priorities will run first.
@@ -16,6 +18,7 @@ public interface ISideEffector<in TRootState>
 }
 
 internal class SideEffectorPriorityComparer<TRootState> : IComparer<ISideEffector<TRootState>>
+    where TRootState : class, IEquatable<TRootState>
 {
     public int Compare(ISideEffector<TRootState> x, ISideEffector<TRootState> y) => y.Priority.CompareTo(x.Priority);
 }

@@ -3,6 +3,7 @@ using System;
 namespace Playdux.Store;
 
 public interface IActionDispatcher<out TRootState>
+    where TRootState : class, IEquatable<TRootState>
 {
     /// <summary>
     /// Dispatch an action to the Store. Changes store state according to the reducer provided at creation.

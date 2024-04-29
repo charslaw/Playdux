@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Playdux.Store;
+using Shared;
 
 namespace Playdux.Tests;
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Playdux.Utils;
 
 namespace Playdux.Store;
 
@@ -8,10 +9,21 @@ namespace Playdux.Store;
 /// Includes capability to dispatch actions to the store, get the current state, get the current state narrowed by
 /// a selector, and get an IObservable to the "selected" state.
 /// </summary>
-public sealed class Store<TRootState> : IStore<TRootState> where TRootState : class
+public class Store<TRootState> : IStore<TRootState>
+    where TRootState : class, IEquatable<TRootState>
 {
+    private TRootState _state;
     /// The current state within the store.
-    public TRootState State { get; private set; }
+    public TRootState State
+    {
+        get => _state;
+        private set
+        {
+            if (EquatableUtils.NullableEquals<TRootState, TRootState>(_state, value)) return;
+            _state = value;
+            OnStateChanged();
+        }
+    }
 
     /// Reduces state according to actions dispatched to the store.
     private readonly Func<TRootState, IAction, TRootState> rootReducer;
@@ -21,11 +33,14 @@ public sealed class Store<TRootState> : IStore<TRootState> where TRootState : cl
 
     /// Holds side effectors in a collection that preserves priority while also providing fast addition and removal.
     private readonly SideEffectorCollection<TRootState> sideEffectors = new();
+    
+    /// Holds observables that have been created for ObservableFor
+    private readonly List<IStateObservable<TRootState>> _observables = [];
 
     /// Create a new store with a given initial state and reducer
     public Store(TRootState initialState, Func<TRootState, IAction, TRootState> rootReducer, IEnumerable<ISideEffector<TRootState>>? initialSideEffectors = null)
     {
-        State = initialState;
+        _state = initialState;
         this.rootReducer = rootReducer;
         actionQueue = new ActionQueue(DispatchInternal);
 
@@ -81,12 +96,26 @@ public sealed class Store<TRootState> : IStore<TRootState> where TRootState : cl
 
     /// <inheritdoc cref="IStateContainer{TRootState}.Select{TSelectedState}"/>
     public TSelectedState Select<TSelectedState>(Func<TRootState, TSelectedState> selector) => selector(State);
-
-    public IObservable<TSelectedState> ObservableFor<TSelectedState>(Func<TRootState, TSelectedState> selector, bool notifyImmediately = false)
+    
+    private void OnStateChanged()
     {
-        throw new NotImplementedException();
+        foreach (var observable in _observables)
+        {
+            observable.OnStateChanged(State);
+        }
     }
 
+    public IObservable<TSelectedState> ObservableFor<TSelectedState>(
+        Func<TRootState, TSelectedState> selector,
+        bool notifyImmediately = false
+    ) where TSelectedState : IEquatable<TSelectedState>
+    {
+        var observable = new StateObservable<TRootState, TSelectedState>(selector, notifyImmediately, State);
+        _observables.Add(observable);
+
+        return observable;
+    }
+    
     /// Throws an error if an incorrectly typed InitializeAction is dispatched to this store.
     private static void ValidateInitializeAction(IAction action)
     {

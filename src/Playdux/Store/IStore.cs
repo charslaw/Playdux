@@ -1,3 +1,7 @@
+using System;
+
 namespace Playdux.Store;
 
-public interface IStore<out TRootState> : IActionDispatcher<TRootState>, IStateContainer<TRootState> { }
+public interface IStore<out TRootState>
+    : IActionDispatcher<TRootState>, IStateContainer<TRootState>
+    where TRootState : class, IEquatable<TRootState>;

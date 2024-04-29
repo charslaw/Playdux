@@ -1,4 +1,5 @@
 using Playdux.Store;
+using Shared;
 
 namespace Playdux.Tests;
 
