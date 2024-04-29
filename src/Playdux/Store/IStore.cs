@@ -1,6 +1,3 @@
-#nullable enable
+namespace Playdux.Store;
 
-namespace Playdux.src.Store
-{
-    public interface IStore<out TRootState> : IActionDispatcher<TRootState>, IStateContainer<TRootState> { }
-}
+public interface IStore<out TRootState> : IActionDispatcher<TRootState>, IStateContainer<TRootState> { }

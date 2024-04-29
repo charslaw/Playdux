@@ -1,4 +1,4 @@
-namespace Playdux.test;
+namespace Playdux.Tests;
 
 internal class BaseObserver<T>(
     Action<T>? onNext = null,

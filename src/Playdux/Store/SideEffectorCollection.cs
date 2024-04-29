@@ -1,20 +1,19 @@
-#nullable enable
 using System;
 using System.Collections.Generic;
 
-namespace Playdux.src.Store
+namespace Playdux.Store;
+
+public class SideEffectorCollection<TRootState>
 {
-    public class SideEffectorCollection<TRootState>
+    private readonly Dictionary<Guid, ISideEffector<TRootState>> table = new();
+    private readonly List<ISideEffector<TRootState>> priority = new();
+
+    private readonly IComparer<ISideEffector<TRootState>> comparer = new SideEffectorPriorityComparer<TRootState>();
+
+    public IEnumerable<ISideEffector<TRootState>> ByPriority => priority;
+
+    public Guid Register(ISideEffector<TRootState> sideEffector)
     {
-        private readonly Dictionary<Guid, ISideEffector<TRootState>> table = new();
-        private readonly List<ISideEffector<TRootState>> priority = new();
-
-        private readonly IComparer<ISideEffector<TRootState>> comparer = new SideEffectorPriorityComparer<TRootState>();
-
-        public IEnumerable<ISideEffector<TRootState>> ByPriority => priority;
-
-        public Guid Register(ISideEffector<TRootState> sideEffector)
-        {
             var id = Guid.NewGuid();
             table.Add(id, sideEffector);
 
@@ -37,8 +36,8 @@ namespace Playdux.src.Store
             return id;
         }
 
-        public void Unregister(Guid id)
-        {
+    public void Unregister(Guid id)
+    {
             if (!table.TryGetValue(id, out var sideEffector)) throw new ArgumentException("Given ID does not correspond with a known side effector", nameof(id));
             table.Remove(id);
             
@@ -46,5 +45,4 @@ namespace Playdux.src.Store
 
             priority.RemoveAt(index);
         }
-    }
 }

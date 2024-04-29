@@ -1,8 +1,5 @@
-#nullable enable
+namespace Playdux.Tests;
 
-namespace Playdux.test
-{
-    internal record SimpleTestState(int N);
+internal record SimpleTestState(int N);
 
-    internal record Point(float X, float Y);
-}
+internal record Point(float X, float Y);

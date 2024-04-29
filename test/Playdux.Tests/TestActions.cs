@@ -1,11 +1,9 @@
-#nullable enable
-using Playdux.src.Store;
+using Playdux.Store;
 
-namespace Playdux.test
-{
-    internal record EmptyAction : IAction;
+namespace Playdux.Tests;
 
-    internal record SimpleStateAddAction(int Value) : IAction;
+internal record EmptyAction : IAction;
 
-    internal record BetterSimpleStateAddAction(int Value) : IAction;
-}
+internal record SimpleStateAddAction(int Value) : IAction;
+
+internal record BetterSimpleStateAddAction(int Value) : IAction;

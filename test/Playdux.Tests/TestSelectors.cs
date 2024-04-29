@@ -1,10 +1,6 @@
-#nullable enable
-using System;
+namespace Playdux.Tests;
 
-namespace Playdux.test
+internal static class TestSelectors
 {
-    internal static class TestSelectors
-    {
-        public static SimpleTestState ErrorSimpleTestStateSelector(SimpleTestState state) => throw new Exception();
-    }
+    public static SimpleTestState ErrorSimpleTestStateSelector(SimpleTestState state) => throw new Exception();
 }

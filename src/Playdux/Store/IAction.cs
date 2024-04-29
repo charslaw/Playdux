@@ -1,7 +1,4 @@
-#nullable enable
+namespace Playdux.Store;
 
-namespace Playdux.src.Store
-{
-    /// <summary>An action to be dispatched to a Store.</summary>
-    public interface IAction { }
-}
+/// <summary>An action to be dispatched to a Store.</summary>
+public interface IAction { }

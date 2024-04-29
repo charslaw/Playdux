@@ -1,17 +1,13 @@
-#nullable enable
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using FluentAssertions;
-using Playdux.src.Store;
+using Playdux.Store;
 
-namespace Playdux.test
+namespace Playdux.Tests;
+
+public class SideEffectorTests
 {
-    public class SideEffectorTests
+    [Fact]
+    public void IdentitySideEffectorHasNoEffect()
     {
-        [Fact]
-        public void IdentitySideEffectorHasNoEffect()
-        {
             SimpleTestState init = new(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
             simpleStore.RegisterSideEffector(new TestSideEffectors.DoesNothingSideEffector<SimpleTestState>());
@@ -22,9 +18,9 @@ namespace Playdux.test
             simpleStore.State.Should().BeEquivalentTo(newState);
         }
 
-        [Fact]
-        public void PreventativeSideEffectorPreventsStateChange()
-        {
+    [Fact]
+    public void PreventativeSideEffectorPreventsStateChange()
+    {
             SimpleTestState init = new(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
             simpleStore.RegisterSideEffector(new TestSideEffectors.PreventsAllActionsSideEffector<SimpleTestState>());
@@ -35,9 +31,9 @@ namespace Playdux.test
             simpleStore.State.Should().BeEquivalentTo(init);
         }
 
-        [Fact]
-        public void PostSideEffectorGetsUpdatedStateFromAction()
-        {
+    [Fact]
+    public void PostSideEffectorGetsUpdatedStateFromAction()
+    {
             SimpleTestState init = new(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -50,9 +46,9 @@ namespace Playdux.test
             actualValue.Should().Be(10);
         }
 
-        [Fact]
-        public void PreSideEffectorCanProduceSideEffects()
-        {
+    [Fact]
+    public void PreSideEffectorCanProduceSideEffects()
+    {
             SimpleTestState init = new(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -69,9 +65,9 @@ namespace Playdux.test
             executeCount.Should().Be(1);
         }
 
-        [Fact]
-        public void PostSideEffectorCanProduceSideEffects()
-        {
+    [Fact]
+    public void PostSideEffectorCanProduceSideEffects()
+    {
             SimpleTestState init = new(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -84,9 +80,9 @@ namespace Playdux.test
             executeCount.Should().Be(1);
         }
 
-        [Fact]
-        public void PreSideEffectorCanInterceptAndInjectSeparateAction()
-        {
+    [Fact]
+    public void PreSideEffectorCanInterceptAndInjectSeparateAction()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.AcceptAddSimpleTestStateReducer);
 
@@ -108,9 +104,9 @@ namespace Playdux.test
             simpleStore.State.N.Should().Be(6);
         }
 
-        [Fact]
-        public void PreSideEffectorInjectedActionWaitsForInitialActionCompletion()
-        {
+    [Fact]
+    public void PreSideEffectorInjectedActionWaitsForInitialActionCompletion()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -140,9 +136,9 @@ namespace Playdux.test
             order.Should().BeEquivalentTo([13, 7]);
         }
 
-        [Fact]
-        public void UnregisteredSideEffectorDoesNotGetCalled()
-        {
+    [Fact]
+    public void UnregisteredSideEffectorDoesNotGetCalled()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -161,9 +157,9 @@ namespace Playdux.test
             executeCount.Should().Be(0);
         }
 
-        [Fact]
-        public void PreSideEffectorCantCancelOtherPreSideEffectors()
-        {
+    [Fact]
+    public void PreSideEffectorCantCancelOtherPreSideEffectors()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -183,9 +179,9 @@ namespace Playdux.test
             secondCalled.Should().BeTrue();
         }
 
-        [Fact]
-        public void SideEffectorsWithSamePriorityActivatedInOrderOfAddition()
-        {
+    [Fact]
+    public void SideEffectorsWithSamePriorityActivatedInOrderOfAddition()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -220,9 +216,9 @@ namespace Playdux.test
             order.Should().BeEquivalentTo([0, 1, 2]);
         }
 
-        [Fact]
-        public void SideEffectorsOccurInPriorityOrder()
-        {
+    [Fact]
+    public void SideEffectorsOccurInPriorityOrder()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -249,9 +245,9 @@ namespace Playdux.test
             order.Should().BeEquivalentTo([0, 1]);
         }
 
-        [Fact]
-        public void SideEffectorInsertOrderIsCorrect()
-        {
+    [Fact]
+    public void SideEffectorInsertOrderIsCorrect()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -294,9 +290,9 @@ namespace Playdux.test
             order.Should().BeEquivalentTo([0, 1, 2, 3]);
         }
 
-        [Fact]
-        public void UnregisteringSideEffectorRemovesCorrectSideEffector()
-        {
+    [Fact]
+    public void UnregisteringSideEffectorRemovesCorrectSideEffector()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -319,9 +315,9 @@ namespace Playdux.test
             (firstCalled, secondCalled).Should().Be((true, false));
         }
 
-        [Fact]
-        public void SideEffectorThrowingDoesNotPreventExecutionOfOtherSideEffectors()
-        {
+    [Fact]
+    public void SideEffectorThrowingDoesNotPreventExecutionOfOtherSideEffectors()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
             
@@ -338,14 +334,13 @@ namespace Playdux.test
             secondCalled.Should().BeTrue();
         }
 
-        [Fact]
-        public void UnregisteringNonexistantSideEffectorThrows()
-        {
+    [Fact]
+    public void UnregisteringNonexistantSideEffectorThrows()
+    {
             var init = new SimpleTestState(0);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
             simpleStore.Invoking(store => store.UnregisterSideEffector(Guid.NewGuid()))
                 .Should().Throw<ArgumentException>();
         }
-    }
 }

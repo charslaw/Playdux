@@ -1,14 +1,12 @@
-#nullable enable
-using FluentAssertions;
-using Playdux.src.Store;
+using Playdux.Store;
 
-namespace Playdux.test
+namespace Playdux.Tests;
+
+public class StoreNotificationTests
 {
-    public class StoreNotificationTests
+    [Fact]
+    public void ObserverNotNotifiedOnDispatchWhenReducerDoesNotChangeState()
     {
-        [Fact]
-        public void ObserverNotNotifiedOnDispatchWhenReducerDoesNotChangeState()
-        {
             SimpleTestState init = new(42);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
@@ -20,9 +18,9 @@ namespace Playdux.test
             subscriber.Notified.Should().Be(0);
         }
 
-        [Fact]
-        public void ObserverNotifiedOnDispatchWhenReducerDoesChangeState()
-        {
+    [Fact]
+    public void ObserverNotifiedOnDispatchWhenReducerDoesChangeState()
+    {
             SimpleTestState init = new(42);
             var simpleStore = new Store<SimpleTestState>(init, TestReducers.IncrementNSimpleTestStateReducer);
 
@@ -35,9 +33,9 @@ namespace Playdux.test
         }
 
 
-        [Fact]
-        public void ObserverNotNotifiedForChangeOutsideOfSelector()
-        {
+    [Fact]
+    public void ObserverNotNotifiedForChangeOutsideOfSelector()
+    {
             Point init = new(4, 2);
             var pointStore = new Store<Point>(init, TestReducers.IncrementYPointReducer);
 
@@ -49,9 +47,9 @@ namespace Playdux.test
             subscriber.Notified.Should().Be(0);
         }
 
-        [Fact]
-        public void ObserverNotifiedForChangeInsideOfSelector()
-        {
+    [Fact]
+    public void ObserverNotifiedForChangeInsideOfSelector()
+    {
             Point init = new(4, 2);
             var pointStore = new Store<Point>(init, TestReducers.IncrementYPointReducer);
 
@@ -62,13 +60,12 @@ namespace Playdux.test
 
             subscriber.Notified.Should().Be(1);
         }
-    }
+}
 
-    internal class EventCounterSubscriber<T> : IObserver<T>
-    {
-        public int Notified { get; private set; }
-        public void OnNext(T value) => Notified++;
-        public void OnCompleted() => throw new NotImplementedException();
-        public void OnError(Exception error) => throw new NotImplementedException();
-    }
+internal class EventCounterSubscriber<T> : IObserver<T>
+{
+    public int Notified { get; private set; }
+    public void OnNext(T value) => Notified++;
+    public void OnCompleted() => throw new NotImplementedException();
+    public void OnError(Exception error) => throw new NotImplementedException();
 }

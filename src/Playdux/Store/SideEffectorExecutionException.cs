@@ -1,17 +1,16 @@
 using System;
 
-namespace Playdux.src.Store
+namespace Playdux.Store;
+
+public enum SideEffectorType { Pre, Post }
+
+public class SideEffectorExecutionException : Exception
 {
-    public enum SideEffectorType { Pre, Post }
+    public SideEffectorType Type;
 
-    public class SideEffectorExecutionException : Exception
+    internal SideEffectorExecutionException(SideEffectorType type, Exception inner)
+        : base($"Side effector threw an exception during {type} effect", inner)
     {
-        public SideEffectorType Type;
-
-        internal SideEffectorExecutionException(SideEffectorType type, Exception inner)
-            : base($"Side effector threw an exception during {type} effect", inner)
-        {
-            Type = type;
-        }
+        Type = type;
     }
 }

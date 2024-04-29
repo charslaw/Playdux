@@ -1,98 +1,94 @@
-#nullable enable
-using System;
-using FluentAssertions;
-using Playdux.src.Store;
+using Playdux.Store;
 
-namespace Playdux.test
+namespace Playdux.Tests;
+
+public class StoreTests
 {
-    public class StoreTests
+
+    [Fact]
+    public void GetStateOnNewStoreReturnsInitialState()
     {
+        SimpleTestState init = new(42);
+        var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
-        [Fact]
-        public void GetStateOnNewStoreReturnsInitialState()
-        {
-            SimpleTestState init = new(42);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+        simpleStore.State.Should().BeEquivalentTo(init);
+    }
 
-            simpleStore.State.Should().BeEquivalentTo(init);
-        }
+    [Fact]
+    public void StateNotChangedAfterDispatchWhenReducerDoesNotChangeState()
+    {
+        SimpleTestState init = new(42);
+        var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
 
-        [Fact]
-        public void StateNotChangedAfterDispatchWhenReducerDoesNotChangeState()
-        {
-            SimpleTestState init = new(42);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+        simpleStore.Dispatch(new EmptyAction());
 
-            simpleStore.Dispatch(new EmptyAction());
+        simpleStore.State.Should().BeEquivalentTo(init);
+    }
 
-            simpleStore.State.Should().BeEquivalentTo(init);
-        }
+    [Fact]
+    public void StateChangedAfterDispatchWhenReducerDoesChangeState()
+    {
+        SimpleTestState init = new(42);
+        var simpleStore = new Store<SimpleTestState>(init, TestReducers.GenerateSetNSimpleTestStateReducer(243));
 
-        [Fact]
-        public void StateChangedAfterDispatchWhenReducerDoesChangeState()
-        {
-            SimpleTestState init = new(42);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.GenerateSetNSimpleTestStateReducer(243));
+        simpleStore.Dispatch(new EmptyAction());
 
-            simpleStore.Dispatch(new EmptyAction());
+        simpleStore.State.N.Should().Be(243);
+    }
 
-            simpleStore.State.N.Should().Be(243);
-        }
+    [Fact]
+    public void InitializeActionSetsState()
+    {
+        Point init = new(0, 1);
+        var pointStore = new Store<Point>(init, TestReducers.IdentityPointReducer);
 
-        [Fact]
-        public void InitializeActionSetsState()
-        {
-            Point init = new(0, 1);
-            var pointStore = new Store<Point>(init, TestReducers.IdentityPointReducer);
+        Point newState = new(10, 11);
+        pointStore.Dispatch(new InitializeAction<Point>(newState));
 
-            Point newState = new(10, 11);
-            pointStore.Dispatch(new InitializeAction<Point>(newState));
+        pointStore.State.Should().BeEquivalentTo(newState);
+    }
 
-            pointStore.State.Should().BeEquivalentTo(newState);
-        }
+    [Fact]
+    public void InitializeActionWithWrongStateTypeThrows()
+    {
+        Point init = new(default, default);
+        var pointStore = new Store<Point>(init, TestReducers.IdentityPointReducer);
 
-        [Fact]
-        public void InitializeActionWithWrongStateTypeThrows()
-        {
-            Point init = new(default, default);
-            var pointStore = new Store<Point>(init, TestReducers.IdentityPointReducer);
+        pointStore.Invoking(store =>
+                store.Dispatch(new InitializeAction<SimpleTestState>(new SimpleTestState(default))))
+            .Should().Throw<InitializeTypeMismatchException>();
+    }
 
-            pointStore.Invoking(store =>
-                    store.Dispatch(new InitializeAction<SimpleTestState>(new SimpleTestState(default))))
-                .Should().Throw<InitializeTypeMismatchException>();
-        }
+    [Fact]
+    public void CanUnsubscribeWithoutBreakingEverything()
+    {
+        Point init = new(4, 2);
+        var pointStore = new Store<Point>(init, TestReducers.IncrementYPointReducer);
 
-        [Fact]
-        public void CanUnsubscribeWithoutBreakingEverything()
-        {
-            Point init = new(4, 2);
-            var pointStore = new Store<Point>(init, TestReducers.IncrementYPointReducer);
+        var disposable = pointStore.ObservableFor(state => state.Y).Subscribe(_ => { });
+        disposable.Dispose();
 
-            var disposable = pointStore.ObservableFor(state => state.Y).Subscribe(_ => { });
-            disposable.Dispose();
-
-            pointStore.Invoking(store => store.Dispatch(new EmptyAction()))
-                .Should().NotThrow();
-        }
+        pointStore.Invoking(store => store.Dispatch(new EmptyAction()))
+            .Should().NotThrow();
+    }
 
 
-        [Fact]
-        public void CanUnsubscribeWithoutBreakingOtherSubscribers()
-        {
-            Point init = new(4, 2);
-            var pointStore = new Store<Point>(init, TestReducers.IncrementYPointReducer);
+    [Fact]
+    public void CanUnsubscribeWithoutBreakingOtherSubscribers()
+    {
+        Point init = new(4, 2);
+        var pointStore = new Store<Point>(init, TestReducers.IncrementYPointReducer);
 
-            var notified = 0;
-            var disposable = pointStore.ObservableFor(state => state.Y).Subscribe(_ => { });
-            pointStore.ObservableFor(state => state.Y)
-                .Subscribe(
-                    onNext: _ => notified++,
-                    onError: e => { Console.Error.WriteLine(e); });
-            disposable.Dispose();
+        var notified = 0;
+        var disposable = pointStore.ObservableFor(state => state.Y).Subscribe(_ => { });
+        pointStore.ObservableFor(state => state.Y)
+            .Subscribe(
+                onNext: _ => notified++,
+                onError: e => { Console.Error.WriteLine(e); });
+        disposable.Dispose();
 
-            pointStore.Dispatch(new EmptyAction());
+        pointStore.Dispatch(new EmptyAction());
 
-            notified.Should().Be(1);
-        }
+        notified.Should().Be(1);
     }
 }
