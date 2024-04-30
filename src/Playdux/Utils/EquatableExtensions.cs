@@ -2,11 +2,12 @@ using System;
 
 namespace Playdux.Utils;
 
-public static class EquatableUtils
+public static class EquatableExtensions
 {
-    public static bool NullableEquals<T, TEquatable>(TEquatable? obj, TEquatable? other)
-        where TEquatable : IEquatable<T>
+    public static bool NullableEquals<T>(T? obj, T? other)
+        where T : IEquatable<T>
     {
+        if (!typeof(T).IsValueType && ReferenceEquals(obj, other)) return true;
         return (obj, other) switch
         {
             (null, null) => true,
