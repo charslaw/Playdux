@@ -19,9 +19,10 @@ public class Store<TRootState> : IStore<TRootState>
         get => _state;
         private set
         {
-            if (EquatableUtils.NullableEquals<TRootState, TRootState>(_state, value)) return;
+            var old = _state;
             _state = value;
-            OnStateChanged();
+            if (EquatableExtensions.NullableEquals(old, _state)) return;
+            OnStateChanged(old, _state);
         }
     }
 
@@ -97,11 +98,11 @@ public class Store<TRootState> : IStore<TRootState>
     /// <inheritdoc cref="IStateContainer{TRootState}.Select{TSelectedState}"/>
     public TSelectedState Select<TSelectedState>(Func<TRootState, TSelectedState> selector) => selector(State);
     
-    private void OnStateChanged()
+    private void OnStateChanged(TRootState prevState, TRootState newState)
     {
         foreach (var observable in _observables)
         {
-            observable.OnStateChanged(State);
+            observable.OnStateChanged(prevState, newState);
         }
     }
 
@@ -110,7 +111,7 @@ public class Store<TRootState> : IStore<TRootState>
         bool notifyImmediately = false
     ) where TSelectedState : IEquatable<TSelectedState>
     {
-        var observable = new StateObservable<TRootState, TSelectedState>(selector, notifyImmediately, State);
+        var observable = new StateObservable<TRootState, TSelectedState>(this, selector, notifyImmediately);
         _observables.Add(observable);
 
         return observable;
