@@ -1,29 +1,31 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using Playdux.Store;
-using Playdux.Utils;
 
 namespace Playdux.DataStructures;
 
 /// Holds actions and ensures that they get handled in FIFO order.
-public class ActionQueue
+public class ActionQueue(Action<DispatchedAction> actionHandler)
 {
-    private readonly ConcurrentQueue<DispatchedAction> q = new();
-    private readonly Action<DispatchedAction> actionHandler;
+    private readonly ConcurrentQueue<DispatchedAction> _queue = new();
 
-    public ActionQueue(Action<DispatchedAction> actionHandler) { this.actionHandler = actionHandler; }
+    private int _isBeingConsumed;
 
-    private bool isBeingConsumed;
-
-    /// Adds an action to the action queue. The action will be sent to the provided action handler when it is at the head of the queue.
+    /// <summary>
+    /// Adds an action to the action queue. The action will be sent to the provided action handler when it is at the
+    /// head of the queue.
+    /// </summary>
+    /// <remarks>
+    /// Dispatching an action into the queue will also begin consuming from the queue, unless it is already being
+    /// consumed from another thread, in which case the dispatched action will be consumed on that thread.
+    /// </remarks>
     public void Dispatch(DispatchedAction action)
     {
-        q.Enqueue(action);
-        if (isBeingConsumed) return;
-
-        using (new DisposableLatch(() => isBeingConsumed = true, () => isBeingConsumed = false))
-        {
-            while (q.TryDequeue(out var next)) actionHandler(next);
-        }
+        _queue.Enqueue(action);
+        if (Interlocked.CompareExchange(ref _isBeingConsumed, 1, 0) != 0) return;
+    
+        while (_queue.TryDequeue(out var next)) actionHandler(next);
+        Interlocked.Exchange(ref _isBeingConsumed, 0);
     }
 }
