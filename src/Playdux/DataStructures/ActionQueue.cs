@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Concurrent;
+using Playdux.Store;
 using Playdux.Utils;
 
-namespace Playdux.Store;
+namespace Playdux.DataStructures;
 
 /// Holds actions and ensures that they get handled in FIFO order.
 public class ActionQueue

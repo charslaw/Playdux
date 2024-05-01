@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Playdux.Store;
 
-namespace Playdux.Store;
+namespace Playdux.DataStructures;
 
 public class SideEffectorCollection<TRootState>
     where TRootState : class, IEquatable<TRootState>
