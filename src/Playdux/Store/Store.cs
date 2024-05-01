@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Playdux.Exceptions;
 using Playdux.Utils;
 
 namespace Playdux.Store;

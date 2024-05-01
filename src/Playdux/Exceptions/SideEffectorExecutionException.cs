@@ -1,6 +1,6 @@
 using System;
 
-namespace Playdux.Store;
+namespace Playdux.Exceptions;
 
 public enum SideEffectorType { Pre, Post }
 

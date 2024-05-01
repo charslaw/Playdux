@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 
-namespace Playdux.Store;
+namespace Playdux.Exceptions;
 
 public sealed class InitializeTypeMismatchException : Exception
 {
