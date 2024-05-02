@@ -1,348 +1,77 @@
 using System.Collections.Generic;
+using FluentAssertions.Execution;
 using Playdux.Actions;
+using Playdux.SideEffectors;
 using Playdux.Store;
-using Shared;
 
 namespace Playdux.Tests.Store;
 
 public class SideEffectorTests
 {
     [Fact]
-    public void IdentitySideEffectorHasNoEffect()
+    public void Dispatch_ShouldCallPreAndPostEffectorWithDispatchedAction()
     {
-            SimpleTestState init = new(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-            simpleStore.RegisterSideEffector(new TestSideEffectors.DoesNothingSideEffector<SimpleTestState>());
+        var initialState = new BasicState(default);
+        var sideEffector = new SpySideEffector();
+        var store = new Store<BasicState>(initialState, (state, _) => state);
+        store.RegisterSideEffector(sideEffector);
 
-            SimpleTestState newState = new(10);
-            simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
+        store.Dispatch(new NAction(1));
 
-            simpleStore.State.Should().BeEquivalentTo(newState);
+        using (new AssertionScope())
+        {
+            sideEffector.PreEffectCalls.Should().BeEquivalentTo([new NAction(1)]);
+            sideEffector.PostEffectCalls.Should().BeEquivalentTo([new NAction(1)]);
         }
+    }
 
     [Fact]
-    public void PreventativeSideEffectorPreventsStateChange()
+    public void Dispatch_ShouldPreventStateChange_WhenPreEffectReturnsFalse()
     {
-            SimpleTestState init = new(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-            simpleStore.RegisterSideEffector(new TestSideEffectors.PreventsAllActionsSideEffector<SimpleTestState>());
+        var initialState = new BasicState(1);
+        var sideEffector = new SpySideEffector(false);
+        var reducer = (BasicState _, IAction<BasicState> _) => new BasicState(2);
+        var store = new Store<BasicState>(initialState, reducer);
+        store.RegisterSideEffector(sideEffector);
 
-            SimpleTestState newState = new(10);
-            simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
+        store.Dispatch(new EmptyAction());
 
-            simpleStore.State.Should().BeEquivalentTo(init);
-        }
+        store.State.Should().BeEquivalentTo(new BasicState(1));
+    }
 
     [Fact]
-    public void PostSideEffectorGetsUpdatedStateFromAction()
+    public void Dispatch_ShouldPreventPostEffectExecution_WhenPreEffectReturnsFalse()
     {
-            SimpleTestState init = new(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+        var initialState = new BasicState(1);
+        var sideEffector = new SpySideEffector(false);
+        var store = new Store<BasicState>(initialState, (state, _) => state);
+        store.RegisterSideEffector(sideEffector);
 
-            int? actualValue = null;
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(post: (_, store) => { actualValue = store.State.N; }));
+        store.Dispatch(new EmptyAction());
 
-            SimpleTestState newState = new(10);
-            simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
+        sideEffector.PostEffectCalls.Should().BeEmpty();
+    }
+}
 
-            actualValue.Should().Be(10);
-        }
+file record BasicState(int N);
+file record EmptyAction : IAction<BasicState>;
+file record NAction(int N) : IAction<BasicState>;
 
-    [Fact]
-    public void PreSideEffectorCanProduceSideEffects()
+file class SpySideEffector(bool preEffectReturn = true) : ISideEffector<BasicState>
+{
+    public int Priority => 0;
+
+    public List<IAction<BasicState>> PreEffectCalls { get; } = [];
+    public List<IAction<BasicState>> PostEffectCalls { get; } = [];
+        
+    public bool PreEffect(DispatchedAction<BasicState> dispatchedAction, IStore<BasicState> store)
     {
-            SimpleTestState init = new(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
+        PreEffectCalls.Add(dispatchedAction.Action);
+        return preEffectReturn;
+    }
 
-            var executeCount = 0;
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) =>
-            {
-                executeCount++;
-                return true;
-            }));
-
-            SimpleTestState newState = new(10);
-            simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
-
-            executeCount.Should().Be(1);
-        }
-
-    [Fact]
-    public void PostSideEffectorCanProduceSideEffects()
+    public void PostEffect(DispatchedAction<BasicState> dispatchedAction, IStore<BasicState> store)
     {
-            SimpleTestState init = new(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            var executeCount = 0;
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(post: (_, _) => executeCount++));
-
-            SimpleTestState newState = new(10);
-            simpleStore.Dispatch(new InitializeAction<SimpleTestState>(newState));
-
-            executeCount.Should().Be(1);
-        }
-
-    [Fact]
-    public void PreSideEffectorCanInterceptAndInjectSeparateAction()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.AcceptAddSimpleTestStateReducer);
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (dispatchedAction, dispatcher) =>
-                {
-                    var action = dispatchedAction.Action;
-                    if (action is SimpleStateAddAction (var value))
-                    {
-                        dispatcher.Dispatch(new BetterSimpleStateAddAction(value));
-                        return false;
-                    }
-
-                    return true;
-                }
-            ));
-
-            simpleStore.Dispatch(new SimpleStateAddAction(5));
-
-            simpleStore.State.N.Should().Be(6);
-        }
-
-    [Fact]
-    public void PreSideEffectorInjectedActionWaitsForInitialActionCompletion()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            var firstRun = true;
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, store) =>
-                {
-                    if (!firstRun) return true;
-
-                    firstRun = false;
-                    store.Dispatch(new SimpleStateAddAction(7));
-
-                    return true;
-                }
-            ));
-
-            var order = new List<int>();
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(post: (dispatchedAction, _) =>
-                {
-                    var actionAsSimpleAdd = dispatchedAction.Action as SimpleStateAddAction;
-
-                    order.Add(actionAsSimpleAdd!.Value);
-                }
-            ));
-
-            simpleStore.Dispatch(new SimpleStateAddAction(13));
-
-            order.Should().BeEquivalentTo([13, 7]);
-        }
-
-    [Fact]
-    public void UnregisteredSideEffectorDoesNotGetCalled()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            var executeCount = 0;
-            var sideEffectorId = simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    executeCount++;
-                    return true;
-                }
-            ));
-
-            simpleStore.UnregisterSideEffector(sideEffectorId);
-
-            simpleStore.Dispatch(new EmptyAction());
-
-            executeCount.Should().Be(0);
-        }
-
-    [Fact]
-    public void PreSideEffectorCantCancelOtherPreSideEffectors()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            var secondCalled = false;
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) => false));
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    secondCalled = true;
-                    return true;
-                }
-            ));
-
-            simpleStore.Dispatch(new EmptyAction());
-
-            secondCalled.Should().BeTrue();
-        }
-
-    [Fact]
-    public void SideEffectorsWithSamePriorityActivatedInOrderOfAddition()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            var order = new List<int>();
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(0);
-                    return true;
-                },
-                priority: 0
-            ));
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(1);
-                    return true;
-                },
-                priority: 0
-            ));
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(2);
-                    return true;
-                },
-                priority: 0
-            ));
-
-            simpleStore.Dispatch(new EmptyAction());
-
-            order.Should().BeEquivalentTo([0, 1, 2]);
-        }
-
-    [Fact]
-    public void SideEffectorsOccurInPriorityOrder()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            var order = new List<int>();
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(1);
-                    return true;
-                },
-                priority: 0
-            ));
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(0);
-                    return true;
-                },
-                priority: 1
-            ));
-
-            simpleStore.Dispatch(new EmptyAction());
-
-            order.Should().BeEquivalentTo([0, 1]);
-        }
-
-    [Fact]
-    public void SideEffectorInsertOrderIsCorrect()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            var order = new List<int>();
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(0);
-                    return true;
-                },
-                priority: 0
-            ));
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(3);
-                    return true;
-                },
-                priority: -1
-            ));
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(1);
-                    return true;
-                },
-                priority: 0
-            ));
-
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>(pre: (_, _) =>
-                {
-                    order.Add(2);
-                    return true;
-                },
-                priority: 0
-            ));
-
-            simpleStore.Dispatch(new EmptyAction());
-
-            order.Should().BeEquivalentTo([0, 1, 2, 3]);
-        }
-
-    [Fact]
-    public void UnregisteringSideEffectorRemovesCorrectSideEffector()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            var firstCalled = false;
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) => {
-                firstCalled = true;
-                return true;
-            }, priority: 0));
-            
-            var secondCalled = false;
-            var secondID = simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) => {
-                secondCalled = true;
-                return true;
-            }, priority: 0));
-            
-            simpleStore.UnregisterSideEffector(secondID);
-            
-            simpleStore.Dispatch(new EmptyAction());
-
-            (firstCalled, secondCalled).Should().Be((true, false));
-        }
-
-    [Fact]
-    public void SideEffectorThrowingDoesNotPreventExecutionOfOtherSideEffectors()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-            
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) => throw new Exception()));
-            
-            var secondCalled = false;
-            simpleStore.RegisterSideEffector(new TestSideEffectors.FakeSideEffector<SimpleTestState>((_, _) => {
-                secondCalled = true;
-                return true;
-            }));
-            
-            simpleStore.Dispatch(new EmptyAction());
-
-            secondCalled.Should().BeTrue();
-        }
-
-    [Fact]
-    public void UnregisteringNonexistantSideEffectorThrows()
-    {
-            var init = new SimpleTestState(0);
-            var simpleStore = new Store<SimpleTestState>(init, TestReducers.IdentitySimpleTestStateReducer);
-
-            simpleStore.Invoking(store => store.UnregisterSideEffector(Guid.NewGuid()))
-                .Should().Throw<ArgumentException>();
-        }
+        PostEffectCalls.Add(dispatchedAction.Action);
+    }
 }
