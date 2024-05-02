@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Playdux.Store;
+namespace Playdux.Actions;
 
 /// An IAction wrapped with some additional metadata for debugging purposes.
 public sealed record DispatchedAction(IAction Action, DateTime DispatchTime, StackTrace DispatchStackTrace, bool IsCanceled)

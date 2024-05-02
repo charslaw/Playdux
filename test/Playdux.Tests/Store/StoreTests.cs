@@ -1,12 +1,13 @@
+using Playdux.Actions;
 using Playdux.Exceptions;
 using Playdux.Store;
 using Shared;
 
-namespace Playdux.Tests;
+namespace Playdux.Tests.Store;
 
 public class StoreTests
 {
-
+    
     [Fact]
     public void GetStateOnNewStoreReturnsInitialState()
     {

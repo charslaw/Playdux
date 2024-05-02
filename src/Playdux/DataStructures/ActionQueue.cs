@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
-using Playdux.Store;
+using Playdux.Actions;
 
 namespace Playdux.DataStructures;
 

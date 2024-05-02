@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using FluentAssertions.Extensions;
-using Playdux.Store;
+using Playdux.Actions;
 
-namespace Playdux.Tests;
+namespace Playdux.Tests.Actions;
 
 public class DispatchedActionTests
 {

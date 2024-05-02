@@ -1,7 +1,7 @@
 using Playdux.Store;
 using Shared;
 
-namespace Playdux.Tests;
+namespace Playdux.Tests.Store;
 
 public class StoreNotificationTests
 {

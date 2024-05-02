@@ -1,4 +1,4 @@
-namespace Playdux.Store;
+namespace Playdux.Actions;
 
 /// <summary>
 /// The InitializeAction is a special reserved action which can be used to initialize a Store.

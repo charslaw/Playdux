@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Playdux.Store;
+using Playdux.SideEffectors;
 
 namespace Playdux.DataStructures;
 

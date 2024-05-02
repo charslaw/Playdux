@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Playdux.Actions;
+using Playdux.Store;
 
-namespace Playdux.Store;
+namespace Playdux.SideEffectors;
 
 public interface ISideEffector<in TRootState>
     where TRootState : class, IEquatable<TRootState>

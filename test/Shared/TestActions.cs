@@ -1,4 +1,4 @@
-using Playdux.Store;
+using Playdux.Actions;
 
 namespace Shared;
 

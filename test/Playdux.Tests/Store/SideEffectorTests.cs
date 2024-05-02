@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using Playdux.Actions;
 using Playdux.Store;
 using Shared;
 
-namespace Playdux.Tests;
+namespace Playdux.Tests.Store;
 
 public class SideEffectorTests
 {
