@@ -31,10 +31,10 @@ public class Store<TRootState> : IStore<TRootState>
     }
 
     /// Reduces state according to actions dispatched to the store.
-    private readonly Func<TRootState, IAction, TRootState> rootReducer;
+    private readonly Func<TRootState, IAction<TRootState>, TRootState> rootReducer;
 
     /// Holds actions in a defined FIFO order to ensure actions are processed in the order that they are received.
-    private readonly ActionQueue actionQueue;
+    private readonly ActionQueue<TRootState> actionQueue;
 
     /// Holds side effectors in a collection that preserves priority while also providing fast addition and removal.
     private readonly SideEffectorCollection<TRootState> sideEffectors = new();
@@ -43,11 +43,11 @@ public class Store<TRootState> : IStore<TRootState>
     private readonly List<IStateObservable<TRootState>> _observables = [];
 
     /// Create a new store with a given initial state and reducer
-    public Store(TRootState initialState, Func<TRootState, IAction, TRootState> rootReducer, IEnumerable<ISideEffector<TRootState>>? initialSideEffectors = null)
+    public Store(TRootState initialState, Func<TRootState, IAction<TRootState>, TRootState> rootReducer, IEnumerable<ISideEffector<TRootState>>? initialSideEffectors = null)
     {
         _state = initialState;
         this.rootReducer = rootReducer;
-        actionQueue = new ActionQueue(DispatchInternal);
+        actionQueue = new ActionQueue<TRootState>(DispatchInternal);
 
         if (initialSideEffectors is null) return;
 
@@ -57,14 +57,13 @@ public class Store<TRootState> : IStore<TRootState>
     }
 
     /// <inheritdoc cref="IActionDispatcher{TRootState}.Dispatch"/>
-    public void Dispatch(IAction action)
+    public void Dispatch(IAction<TRootState> action)
     {
-        ValidateInitializeAction(action);
-        actionQueue.Dispatch(new DispatchedAction(action));
+        actionQueue.Dispatch(new DispatchedAction<TRootState>(action));
     }
 
     /// Handles a single dispatched action from the queue, activating pre effects, reducing state, updating state, then activating post effects.
-    private void DispatchInternal(DispatchedAction dispatchedAction)
+    private void DispatchInternal(DispatchedAction<TRootState> dispatchedAction)
     {
         // Pre Effects
         foreach (var sideEffector in sideEffectors.ByPriority)
@@ -119,15 +118,5 @@ public class Store<TRootState> : IStore<TRootState>
         _observables.Add(observable);
 
         return observable;
-    }
-    
-    /// Throws an error if an incorrectly typed InitializeAction is dispatched to this store.
-    private static void ValidateInitializeAction(IAction action)
-    {
-        var actionType = action.GetType();
-        var isInitializeAction = actionType.IsGenericType && actionType.GetGenericTypeDefinition() == typeof(InitializeAction<>);
-        var isInitializeActionCorrectType = isInitializeAction && action is InitializeAction<TRootState>;
-
-        if (isInitializeAction && !isInitializeActionCorrectType) throw new InitializeTypeMismatchException(actionType.GetGenericArguments()[0], typeof(TRootState));
     }
 }

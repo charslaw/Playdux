@@ -6,9 +6,12 @@ using Playdux.Actions;
 namespace Playdux.DataStructures;
 
 /// Holds actions and ensures that they get handled in FIFO order.
-public class ActionQueue(Action<DispatchedAction> actionHandler)
+public class ActionQueue<TRootState>(
+    Action<DispatchedAction<TRootState>> actionHandler
+)
+    where TRootState : class, IEquatable<TRootState>
 {
-    private readonly ConcurrentQueue<DispatchedAction> _queue = new();
+    private readonly ConcurrentQueue<DispatchedAction<TRootState>> _queue = new();
 
     private int _isBeingConsumed;
 
@@ -20,11 +23,11 @@ public class ActionQueue(Action<DispatchedAction> actionHandler)
     /// Dispatching an action into the queue will also begin consuming from the queue, unless it is already being
     /// consumed from another thread, in which case the dispatched action will be consumed on that thread.
     /// </remarks>
-    public void Dispatch(DispatchedAction action)
+    public void Dispatch(DispatchedAction<TRootState> action)
     {
         _queue.Enqueue(action);
         if (Interlocked.CompareExchange(ref _isBeingConsumed, 1, 0) != 0) return;
-    
+
         while (_queue.TryDequeue(out var next)) actionHandler(next);
         Interlocked.Exchange(ref _isBeingConsumed, 0);
     }

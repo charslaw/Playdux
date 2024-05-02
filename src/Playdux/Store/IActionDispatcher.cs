@@ -4,14 +4,14 @@ using Playdux.SideEffectors;
 
 namespace Playdux.Store;
 
-public interface IActionDispatcher<out TRootState>
+public interface IActionDispatcher<TRootState>
     where TRootState : class, IEquatable<TRootState>
 {
     /// <summary>
     /// Dispatch an action to the Store. Changes store state according to the reducer provided at creation.
     /// </summary>
     /// <remarks>Actions will be consumed in FIFO order.</remarks>
-    void Dispatch(IAction action);
+    void Dispatch(IAction<TRootState> action);
 
     /// <summary>
     /// Registers a new Side Effector to observe this Store.
