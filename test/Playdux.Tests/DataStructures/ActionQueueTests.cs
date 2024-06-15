@@ -32,8 +32,8 @@ public class ActionQueueTests
     [Fact]
     public async Task Dispatch_ShouldExecuteActionsDispatchedAtSameTimeOnSameThread()
     {
-        var nums = new List<int>();
-        var queue = new ActionQueue<EmptyState>(_ => nums.Add(Environment.CurrentManagedThreadId));
+        var threadIds = new List<int>();
+        var queue = new ActionQueue<EmptyState>(_ => threadIds.Add(Environment.CurrentManagedThreadId));
         
         // When multiple actions are dispatched at the same time, they should be handled on the same thread
         // We don't want two separate threads attempting to read from the queue at the same time and modifying the
@@ -43,6 +43,6 @@ public class ActionQueueTests
             Task.Delay(0).ContinueWith(_ => queue.Dispatch(new DispatchedAction<EmptyState>(new EmptyAction())))
         );
 
-        nums.Distinct().Count().Should().Be(1);
+        threadIds.Distinct().Count().Should().Be(1);
     }
 }
