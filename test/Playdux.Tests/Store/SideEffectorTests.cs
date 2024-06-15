@@ -30,8 +30,7 @@ public class SideEffectorTests
     {
         var initialState = new BasicState(1);
         var sideEffector = new SpySideEffector(false);
-        var reducer = (BasicState _, IAction<BasicState> _) => new BasicState(2);
-        var store = new Store<BasicState>(initialState, reducer);
+        var store = new Store<BasicState>(initialState, (_, _) => new BasicState(2));
         store.RegisterSideEffector(sideEffector);
 
         store.Dispatch(new EmptyAction());

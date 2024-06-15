@@ -5,13 +5,11 @@ namespace Playdux.Tests.Store;
 
 public class DispatchTests
 {
-
     [Fact]
     public void Dispatch_ShouldModifyStateWithRootReducer()
     {
         var initialState = new BasicState(10);
-        var reducer = (BasicState state, IAction<BasicState> _) => new BasicState(20);
-        var store = new Store<BasicState>(initialState, reducer);
+        var store = new Store<BasicState>(initialState, (_, _) => new BasicState(20));
 
         store.Dispatch(new EmptyAction());
 
@@ -22,11 +20,11 @@ public class DispatchTests
     public void Dispatch_ShouldPassDispatchedActionToReducer()
     {
         var initialState = new BasicState(10);
-        var reducer = (BasicState state, IAction<BasicState> action) => action switch
-        {
-            NAction a => new BasicState(a.N)
-        };
-        var store = new Store<BasicState>(initialState, reducer);
+        var store = new Store<BasicState>(initialState,
+            (state, action) => action is NAction a
+                ? new BasicState(a.N)
+                : state
+        );
 
         store.Dispatch(new NAction(20));
 
@@ -35,5 +33,7 @@ public class DispatchTests
 }
 
 file record BasicState(int N);
+
 file record EmptyAction : IAction<BasicState>;
+
 file record NAction(int N) : IAction<BasicState>;
