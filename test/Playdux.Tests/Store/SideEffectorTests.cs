@@ -58,8 +58,6 @@ file record NAction(int N) : IAction<BasicState>;
 
 file class SpySideEffector(bool preEffectReturn = true) : ISideEffector<BasicState>
 {
-    public int Priority => 0;
-
     public List<IAction<BasicState>> PreEffectCalls { get; } = [];
     public List<IAction<BasicState>> PostEffectCalls { get; } = [];
         

@@ -1,26 +1,21 @@
 using System;
-using System.Collections.Generic;
 using Playdux.Actions;
 using Playdux.Store;
 
 namespace Playdux.SideEffectors;
 
-public interface ISideEffector<TRootState>
-    where TRootState : class, IEquatable<TRootState>
+public interface IPreSideEffector<TRootState> where TRootState : class, IEquatable<TRootState>
 {
-    /// Determines the order in which SideEffectors will be executed.
-    /// Higher priorities will run first.
-    public int Priority { get; }
-
     /// Execute a side effect before the action is sent to the reducer.
     public bool PreEffect(DispatchedAction<TRootState> dispatchedAction, IStore<TRootState> store);
+}
 
+public interface IPostSideEffector<TRootState>
+    where TRootState : class, IEquatable<TRootState>
+{
     /// Execute a side effect after the action has been sent to the reducer.
     public void PostEffect(DispatchedAction<TRootState> dispatchedAction, IStore<TRootState> store);
 }
 
-internal class SideEffectorPriorityComparer<TRootState> : IComparer<ISideEffector<TRootState>>
-    where TRootState : class, IEquatable<TRootState>
-{
-    public int Compare(ISideEffector<TRootState> x, ISideEffector<TRootState> y) => y.Priority.CompareTo(x.Priority);
-}
+public interface ISideEffector<TRootState>: IPreSideEffector<TRootState>, IPostSideEffector<TRootState>
+    where TRootState : class, IEquatable<TRootState>;

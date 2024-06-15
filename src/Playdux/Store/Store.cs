@@ -36,24 +36,18 @@ public class Store<TRootState> : IStore<TRootState>
     /// Holds actions in a defined FIFO order to ensure actions are processed in the order that they are received.
     private readonly ActionQueue<TRootState> _actionQueue;
 
-    /// Holds side effectors in a collection that preserves priority while also providing fast addition and removal.
-    private readonly SideEffectorCollection<TRootState> _sideEffectors = new();
+    private readonly PostInsertSortedList<IPreSideEffector<TRootState>> _preSideEffectors = new();
+    private readonly PostInsertSortedList<IPostSideEffector<TRootState>> _postSideEffectors = new();
     
     /// Holds observables that have been created for ObservableFor
     private readonly List<IStateObservable<TRootState>> _observables = [];
 
     /// Create a new store with a given initial state and reducer
-    public Store(TRootState initialState, Func<TRootState, IAction<TRootState>, TRootState> rootReducer, IEnumerable<ISideEffector<TRootState>>? initialSideEffectors = null)
+    public Store(TRootState initialState, Func<TRootState, IAction<TRootState>, TRootState> rootReducer)
     {
         _state = initialState;
         _rootReducer = rootReducer;
         _actionQueue = new ActionQueue<TRootState>(DispatchInternal);
-
-        if (initialSideEffectors is null) return;
-
-        foreach (var sideEffector in initialSideEffectors) RegisterSideEffector(sideEffector);
-
-        Dispatch(new InitializeAction<TRootState>(initialState));
     }
 
     /// <inheritdoc cref="IActionDispatcher{TRootState}.Dispatch"/>
@@ -62,15 +56,48 @@ public class Store<TRootState> : IStore<TRootState>
         _actionQueue.Dispatch(new DispatchedAction<TRootState>(action));
     }
 
+    public void RegisterSideEffector(int priority, IPreSideEffector<TRootState> sideEffector) =>
+        _preSideEffectors.Add(priority, sideEffector);
+
+    public void RegisterSideEffector(int priority, IPostSideEffector<TRootState> sideEffector) =>
+        _postSideEffectors.Add(priority, sideEffector);
+
+    public void RegisterSideEffector(int priority, ISideEffector<TRootState> sideEffector)
+    {
+        _preSideEffectors.Add(priority, sideEffector);
+        _postSideEffectors.Add(priority, sideEffector);
+    }
+
+    public void RegisterSideEffector(IPreSideEffector<TRootState> sideEffector) =>
+        RegisterSideEffector(0, sideEffector);
+
+    public void RegisterSideEffector(IPostSideEffector<TRootState> sideEffector) =>
+        RegisterSideEffector(0, sideEffector);
+
+    public void RegisterSideEffector(ISideEffector<TRootState> sideEffector) =>
+        RegisterSideEffector(0, sideEffector);
+
+    public void UnregisterSideEffector(IPreSideEffector<TRootState> sideEffector) =>
+        _preSideEffectors.Remove(sideEffector);
+
+    public void UnregisterSideEffector(IPostSideEffector<TRootState> sideEffector) =>
+        _postSideEffectors.Remove(sideEffector);
+
+    public void UnregisterSideEffector(ISideEffector<TRootState> sideEffector)
+    {
+        _preSideEffectors.Remove(sideEffector);
+        _postSideEffectors.Remove(sideEffector);
+    }
+
     /// Handles a single dispatched action from the queue, activating pre effects, reducing state, updating state, then activating post effects.
     private void DispatchInternal(DispatchedAction<TRootState> dispatchedAction)
     {
         // Pre Effects
-        foreach (var sideEffector in _sideEffectors.ByPriority)
+        foreach (var preEffector in _preSideEffectors)
         {
             try
             {
-                var shouldAllow = sideEffector.PreEffect(dispatchedAction, this);
+                var shouldAllow = preEffector.PreEffect(dispatchedAction, this);
                 if (!shouldAllow) dispatchedAction = dispatchedAction with { IsCanceled = true };
             }
             catch (Exception e) { throw new SideEffectorExecutionException(SideEffectorType.Pre, e); }
@@ -80,23 +107,16 @@ public class Store<TRootState> : IStore<TRootState>
 
         // Reduce
         var action = dispatchedAction.Action;
-        var state = State;
-        if (action is InitializeAction<TRootState> castAction) state = castAction.InitialState;
-        State = _rootReducer(state, action);
+        var oldState = State;
+        State = _rootReducer(oldState, action);
 
         // Post Effects
-        foreach (var sideEffector in _sideEffectors.ByPriority)
+        foreach (var postEffector in _postSideEffectors)
         {
-            try { sideEffector.PostEffect(dispatchedAction, this); }
+            try { postEffector.PostEffect(dispatchedAction, this); }
             catch (Exception e) { throw new SideEffectorExecutionException(SideEffectorType.Post, e); }
         }
     }
-
-    /// <inheritdoc cref="IActionDispatcher{TRootState}.RegisterSideEffector"/>
-    public Guid RegisterSideEffector(ISideEffector<TRootState> sideEffector) => _sideEffectors.Register(sideEffector);
-
-    /// <inheritdoc cref="IActionDispatcher{TRootState}.UnregisterSideEffector"/>
-    public void UnregisterSideEffector(Guid sideEffectorId) => _sideEffectors.Unregister(sideEffectorId);
 
     /// <inheritdoc cref="IStateContainer{TRootState}.Select{TSelectedState}"/>
     public TSelectedState Select<TSelectedState>(Func<TRootState, TSelectedState> selector) => selector(State);
