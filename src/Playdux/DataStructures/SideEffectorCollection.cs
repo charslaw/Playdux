@@ -7,19 +7,19 @@ namespace Playdux.DataStructures;
 public class SideEffectorCollection<TRootState>
     where TRootState : class, IEquatable<TRootState>
 {
-    private readonly Dictionary<Guid, ISideEffector<TRootState>> table = new();
-    private readonly List<ISideEffector<TRootState>> priority = new();
+    private readonly Dictionary<Guid, ISideEffector<TRootState>> _table = new();
+    private readonly List<ISideEffector<TRootState>> _priority = new();
 
-    private readonly IComparer<ISideEffector<TRootState>> comparer = new SideEffectorPriorityComparer<TRootState>();
+    private readonly IComparer<ISideEffector<TRootState>> _comparer = new SideEffectorPriorityComparer<TRootState>();
 
-    public IEnumerable<ISideEffector<TRootState>> ByPriority => priority;
+    public IEnumerable<ISideEffector<TRootState>> ByPriority => _priority;
 
     public Guid Register(ISideEffector<TRootState> sideEffector)
     {
             var id = Guid.NewGuid();
-            table.Add(id, sideEffector);
+            _table.Add(id, sideEffector);
 
-            var index = priority.BinarySearch(sideEffector, comparer);
+            var index = _priority.BinarySearch(sideEffector, _comparer);
 
             if (index < 0)
             {
@@ -30,21 +30,21 @@ public class SideEffectorCollection<TRootState>
             else
             {
                 // a side effector with the same priority already exists in the list, insert this one after the existing one.
-                while (++index < priority.Count && priority[index].Priority == sideEffector.Priority) { }
+                while (++index < _priority.Count && _priority[index].Priority == sideEffector.Priority) { }
             }
 
-            priority.Insert(index, sideEffector);
+            _priority.Insert(index, sideEffector);
 
             return id;
         }
 
     public void Unregister(Guid id)
     {
-            if (!table.TryGetValue(id, out var sideEffector)) throw new ArgumentException("Given ID does not correspond with a known side effector", nameof(id));
-            table.Remove(id);
+            if (!_table.TryGetValue(id, out var sideEffector)) throw new ArgumentException("Given ID does not correspond with a known side effector", nameof(id));
+            _table.Remove(id);
             
-            var index = priority.FindIndex(other => other == sideEffector);
+            var index = _priority.FindIndex(other => other == sideEffector);
 
-            priority.RemoveAt(index);
+            _priority.RemoveAt(index);
         }
 }
